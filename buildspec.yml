@@ -1,0 +1,42 @@
+version: 0.2
+
+env:
+  variables:
+    AWS_DEFAULT_REGION: "us-east-2"
+    AWS_ACCOUNT_ID    : "112298774548"
+    ECR_REPO_NAME     : "my-php-fpm-nginx-stat-din"
+    ECR_IMAGE_TAG     : "latest"
+
+phases:
+  install:
+    commands:
+      - echo "Check AWS version"
+      - aws --version
+
+  pre_build:
+    commands:
+      - echo Logging in to Amazon ECR...
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
+        # aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin 112298774548.dkr.ecr.us-east-2.amazonaws.com
+
+  build:
+    commands:
+      - printf '[{"name":"my-php-fpm-nginx--stat-din-Container","imageUri":"112298774548.dkr.ecr.us-east-2.amazonaws.com/my-php-fpm-nginx-stat-din:latest"}]' > imagedefinitions.json
+
+      - echo Building the Docker image...
+      - docker build -t $ECR_REPO_NAME:$ECR_IMAGE_TAG .
+        # docker build -t my-php-fpm-nginx-stat-din:latest .
+
+      - docker tag $ECR_REPO_NAME:$ECR_IMAGE_TAG $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$ECR_REPO_NAME:$ECR_IMAGE_TAG
+        # docker tag my-php-fpm-nginx-stat-din:latest 112298774548.dkr.ecr.us-east-2.amazonaws.com/my-php-fpm-nginx-stat-din:latest
+
+  post_build:
+    commands:
+      - echo Pushing the Docker image...
+      - docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$ECR_REPO_NAME:$ECR_IMAGE_TAG
+        # docker push 112298774548.dkr.ecr.us-east-2.amazonaws.com/my-php-fpm-nginx-stat-din:latest
+
+artifacts:
+  files:
+      # artifacts
+    - imagedefinitions.json
